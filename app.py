@@ -8,11 +8,32 @@ Menggunakan Flask + AHP + Profile Matching
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask.json.provider import DefaultJSONProvider
 import pandas as pd
 import numpy as np
+import math
 import os
 
+# ✅ Custom JSON Provider — konversi NaN dan Infinity → None (null di JSON)
+# NaN tidak valid di JSON (RFC 8259), harus diganti null
+class NaNSafeJSONProvider(DefaultJSONProvider):
+    def dumps(self, obj, **kwargs):
+        return super().dumps(self._sanitize(obj), **kwargs)
+
+    def _sanitize(self, obj):
+        if isinstance(obj, float):
+            if math.isnan(obj) or math.isinf(obj):
+                return None
+            return obj
+        if isinstance(obj, dict):
+            return {k: self._sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [self._sanitize(i) for i in obj]
+        return obj
+
 app = Flask(__name__)
+app.json_provider_class = NaNSafeJSONProvider
+app.json = NaNSafeJSONProvider(app)
 CORS(app)
 
 # ===================== LOAD DATASET =====================
