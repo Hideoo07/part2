@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Rekomendasi Properti</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #7f8c8d; margin-bottom: 30px; }
+        .card { background: #fff; border-radius: 12px; padding: 24px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .card h2 { color: #2c3e50; margin-bottom: 16px; font-size: 1.2em; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; margin-bottom: 6px; font-size: 0.9em; color: #555; }
+        .form-group label .required { color: #e74c3c; }
+        .form-group input, .form-group select {
+            padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
+            font-size: 0.95em; transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus { border-color: #3498db; outline: none; }
+        .form-group .error-text { color: #e74c3c; font-size: 0.8em; margin-top: 4px; display: none; }
+        .form-group.has-error input, .form-group.has-error select { border-color: #e74c3c; }
+        .form-group.has-error .error-text { display: block; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .btn-primary { background: #3498db; color: #fff; width: 100%; margin-top: 16px; }
+        .btn-primary:hover { background: #2980b9; }
+        .btn-primary:disabled { background: #bdc3c7; cursor: not-allowed; }
+        .dataset-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+        .info-item { background: #f0f4f8; padding: 12px; border-radius: 8px; text-align: center; }
+        .info-item .label { font-size: 0.8em; color: #7f8c8d; }
+        .info-item .value { font-size: 1.2em; font-weight: 700; color: #2c3e50; }
+        .results { margin-top: 20px; }
+        .result-card { background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+        .result-card h3 { color: #2c3e50; margin-bottom: 8px; }
+        .result-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+        .result-meta span { background: #edf2f7; padding: 4px 10px; border-radius: 6px; font-size: 0.85em; }
+        .result-score { float: right; background: #27ae60; color: #fff; padding: 4px 10px; border-radius: 6px; font-weight: 700; }
+        .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; }
+        .alert-error { background: #fdecea; color: #c0392b; border: 1px solid #f5c6cb; }
+        .alert-info { background: #e8f4fd; color: #2980b9; border: 1px solid #bee5eb; }
+        .alert-success { background: #eafaf1; color: #27ae60; border: 1px solid #a3e4d7; }
+        .loading { text-align: center; padding: 20px; color: #7f8c8d; }
+        #error-container { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Sistem Rekomendasi Properti</h1>
+    <p class="subtitle">Temukan properti ideal sesuai kebutuhan Anda</p>
+
+    <!-- Dataset Info -->
+    <div class="card">
+        <h2>Informasi Dataset</h2>
+        <div id="dataset-info" class="dataset-info">
+            <div class="loading">Memuat informasi dataset...</div>
+        </div>
+    </div>
+
+    <!-- Error Container -->
+    <div id="error-container" class="alert alert-error"></div>
+
+    <!-- Form -->
+    <div class="card">
+        <h2>Kriteria Pencarian</h2>
+        <form id="rekomendasi-form">
+            <div class="form-grid">
+                <div class="form-group" id="fg-max-price">
+                    <label>Harga Maksimum (Rp) <span class="required">*</span></label>
+                    <input type="number" id="max_price" placeholder="contoh: 1000000000" min="1">
+                    <span class="error-text">Harga maksimum wajib diisi dan harus lebih dari 0</span>
+                </div>
+                <div class="form-group" id="fg-provinsi">
+                    <label>Provinsi <span class="required">*</span></label>
+                    <select id="provinsi"><option value="">-- Pilih Provinsi --</option></select>
+                    <span class="error-text">Provinsi wajib dipilih</span>
+                </div>
+                <div class="form-group">
+                    <label>Kota</label>
+                    <select id="kota"><option value="">-- Pilih Kota --</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Kecamatan</label>
+                    <select id="kecamatan"><option value="">-- Pilih Kecamatan --</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Jenis Properti</label>
+                    <select id="jenis_properti">
+                        <option value="">-- Semua Jenis --</option>
+                        <option value="Rumah">Rumah</option>
+                        <option value="Apartemen">Apartemen</option>
+                        <option value="Ruko">Ruko</option>
+                        <option value="Tanah">Tanah</option>
+                        <option value="Villa">Villa</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Luas Minimum (m²)</label>
+                    <input type="number" id="min_luas" placeholder="contoh: 50" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Kamar Tidur (min)</label>
+                    <input type="number" id="kamar_tidur" placeholder="contoh: 2" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Jumlah Rekomendasi</label>
+                    <input type="number" id="top_k" value="5" min="1" max="20">
+                </div>
+                <div class="form-group">
+                    <label>Pekerjaan</label>
+                    <select id="pekerjaan">
+                        <option value="">-- Pilih Pekerjaan --</option>
+                        <option value="PNS">PNS</option>
+                        <option value="Swasta">Swasta</option>
+                        <option value="Wiraswasta">Wiraswasta</option>
+                        <option value="Profesional">Profesional</option>
+                        <option value="Freelancer">Freelancer</option>
+                        <option value="Pensiunan">Pensiunan</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" id="btn-submit">Cari Rekomendasi</button>
+        </form>
+    </div>
+
+    <!-- Results -->
+    <div id="results-container"></div>
+</div>
+
+<script>
+// ===================== INITIALIZATION =====================
+document.addEventListener('DOMContentLoaded', () => {
+    loadDatasetInfo();
+    loadProvinsi();
+});
+
+// ===================== LOAD DATASET INFO =====================
+async function loadDatasetInfo() {
+    try {
+        const res = await fetch('/api/dataset-info');
+        if (!res.ok) throw new Error('Gagal memuat dataset info');
+        const data = await res.json();
+        document.getElementById('dataset-info').innerHTML = `
+            <div class="info-item"><div class="label">Total Properti</div><div class="value">${data.total_properti.toLocaleString()}</div></div>
+            <div class="info-item"><div class="label">Rata-rata Harga</div><div class="value">Rp ${(data.rata_rata_harga/1e6).toFixed(0)} Jt</div></div>
+            <div class="info-item"><div class="label">Harga Terendah</div><div class="value">Rp ${(data.min_harga/1e6).toFixed(0)} Jt</div></div>
+            <div class="info-item"><div class="label">Harga Tertinggi</div><div class="value">Rp ${(data.max_harga/1e9).toFixed(1)} M</div></div>
+        `;
+    } catch (e) {
+        document.getElementById('dataset-info').innerHTML = `<div class="alert alert-error">Gagal memuat informasi dataset: ${e.message}</div>`;
+    }
+}
+
+// ===================== LOAD DROPDOWN DATA =====================
+async function loadProvinsi() {
+    try {
+        const res = await fetch('/api/provinsi');
+        const data = await res.json();
+        const select = document.getElementById('provinsi');
+        data.provinsi.forEach(p => {
+            select.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+    } catch (e) {
+        console.error('Gagal memuat provinsi:', e);
+    }
+}
+
+document.getElementById('provinsi').addEventListener('change', async function() {
+    const provinsi = this.value;
+    const kotaSelect = document.getElementById('kota');
+    const kecSelect = document.getElementById('kecamatan');
+    kotaSelect.innerHTML = '<option value="">-- Pilih Kota --</option>';
+    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+
+    if (!provinsi) return;
+    try {
+        const res = await fetch(`/api/kota/${encodeURIComponent(provinsi)}`);
+        const data = await res.json();
+        data.kota.forEach(k => { kotaSelect.innerHTML += `<option value="${k}">${k}</option>`; });
+    } catch (e) { console.error('Gagal memuat kota:', e); }
+});
+
+document.getElementById('kota').addEventListener('change', async function() {
+    const provinsi = document.getElementById('provinsi').value;
+    const kota = this.value;
+    const kecSelect = document.getElementById('kecamatan');
+    kecSelect.innerHTML = '<option value="">-- Pilih Kecamatan --</option>';
+
+    if (!provinsi || !kota) return;
+    try {
+        const res = await fetch(`/api/kecamatan/${encodeURIComponent(provinsi)}/${encodeURIComponent(kota)}`);
+        const data = await res.json();
+        data.kecamatan.forEach(k => { kecSelect.innerHTML += `<option value="${k}">${k}</option>`; });
+    } catch (e) { console.error('Gagal memuat kecamatan:', e); }
+});
+
+// ===================== FORM VALIDATION & SUBMISSION =====================
+document.getElementById('rekomendasi-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    clearErrors();
+
+    // Validate required fields
+    let isValid = true;
+
+    const maxPrice = document.getElementById('max_price').value.trim();
+    if (!maxPrice || parseInt(maxPrice) <= 0) {
+        showFieldError('fg-max-price');
+        isValid = false;
+    }
+
+    const provinsi = document.getElementById('provinsi').value;
+    if (!provinsi) {
+        showFieldError('fg-provinsi');
+        isValid = false;
+    }
+
+    if (!isValid) {
+        showError('Mohon lengkapi field yang wajib diisi (ditandai *).');
+        return;
+    }
+
+    // Build payload
+    const payload = {
+        max_price: parseInt(maxPrice),
+        provinsi: provinsi,
+        kota: document.getElementById('kota').value,
+        kecamatan: document.getElementById('kecamatan').value,
+        jenis_properti: document.getElementById('jenis_properti').value,
+        min_luas: parseInt(document.getElementById('min_luas').value) || 0,
+        kamar_tidur: parseInt(document.getElementById('kamar_tidur').value) || 0,
+        top_k: parseInt(document.getElementById('top_k').value) || 5,
+        pekerjaan: document.getElementById('pekerjaan').value
+    };
+
+    // Submit
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'Mencari...';
+
+    try {
+        const res = await fetch('/api/rekomendasi', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            const details = data.details ? data.details.join(', ') : data.error;
+            showError(details);
+            return;
+        }
+
+        displayResults(data);
+    } catch (err) {
+        showError('Terjadi kesalahan koneksi: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Cari Rekomendasi';
+    }
+});
+
+// ===================== DISPLAY RESULTS =====================
+function displayResults(data) {
+    const container = document.getElementById('results-container');
+
+    if (!data.rekomendasi || data.rekomendasi.length === 0) {
+        container.innerHTML = `<div class="alert alert-info">${data.message || 'Tidak ada properti yang sesuai.'}</div>`;
+        return;
+    }
+
+    let html = `<div class="card"><h2>Hasil Rekomendasi</h2>
+        <div class="alert alert-success">${data.message}</div><div class="results">`;
+
+    data.rekomendasi.forEach((item, idx) => {
+        html += `
+        <div class="result-card">
+            <span class="result-score">Skor: ${item.skor}</span>
+            <h3>${idx + 1}. ${item.nama}</h3>
+            <div class="result-meta">
+                <span>Harga: Rp ${item.harga.toLocaleString()}</span>
+                <span>Luas: ${item.luas_tanah} m²</span>
+                <span>Kamar: ${item.kamar_tidur}</span>
+                <span>${item.kecamatan}, ${item.kota}</span>
+                <span>${item.provinsi}</span>
+            </div>
+        </div>`;
+    });
+
+    html += '</div></div>';
+    container.innerHTML = html;
+}
+
+// ===================== ERROR HELPERS =====================
+function showFieldError(groupId) {
+    document.getElementById(groupId).classList.add('has-error');
+}
+
+function clearErrors() {
+    document.querySelectorAll('.form-group').forEach(fg => fg.classList.remove('has-error'));
+    document.getElementById('error-container').style.display = 'none';
+}
+
+function showError(msg) {
+    const el = document.getElementById('error-container');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+</script>
+</body>
+</html>

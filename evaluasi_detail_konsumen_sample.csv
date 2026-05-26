@@ -1,0 +1,51 @@
+f1,kecamatan,konsumen_id,kota,mrr,ndcg,pekerjaan,precision,provinsi,recall,total_kandidat,total_relevan
+0.0,,1,Bekasi Kab.,0.0,0.0,Buruh,0.0,Jawa Barat,0.0,6,0
+0.8235,,2,,1.0,1.0,Umum,0.7,Jawa Barat,1.0,580,7
+0.1818,,3,Banjarnegara Kab.,1.0,1.0,Umum,0.1,Jawa Tengah,1.0,2,1
+0.0,Gunung Puyuh,4,,0.0,0.0,Pengusaha,0.0,Jawa Barat,0.0,1,0
+0.1818,Semarang Kab.,5,Jawa Tengah,1.0,1.0,Pengusaha,0.1,Jawa Tengah,1.0,2,1
+0.0,Gayamsari,6,Semarang Kota,0.0,0.0,Pengusaha,0.0,Jawa Tengah,0.0,1,0
+0.8235,,7,Malang Kab.,1.0,1.0,ASN,0.7,Jawa Barat,1.0,7,7
+0.9524,Sukoharjo Kab.,8,Jawa Tengah,1.0,1.0,ASN,1.0,Jawa Tengah,0.9091,11,11
+0.1515,,9,Surabaya Kota,1.0,1.0,ASN,1.0,Jawa Barat,0.082,324,122
+0.0,,10,Bekasi Kab.,0.0,0.0,ASN,0.0,Jawa Barat,0.0,6,0
+0.1818,Sumberlawang,11,Sragen Kab.,1.0,1.0,Umum,0.1,Jawa Tengah,1.0,1,1
+1.0,,12,Surakarta Kota,1.0,1.0,Pengusaha,1.0,Jawa Tengah,1.0,77,10
+0.0,Cikole,13,Sukabumi Kota,0.0,0.0,Buruh,0.0,Jawa Barat,0.0,1,0
+0.4615,Gununganyar,14,,1.0,1.0,Umum,0.3,Jawa Timur,1.0,3,3
+0.0542,,15,,1.0,1.0,Pengusaha,1.0,Jawa Barat,0.0279,580,359
+0.7407,,16,Sidoarjo  Kab.,1.0,1.0,Pengusaha,1.0,Jawa Timur,0.5882,18,17
+0.8889,,17,,1.0,1.0,Umum,0.8,Jawa Barat,1.0,580,8
+0.0,Patrang,18,Jember Kab.,0.0,0.0,Buruh,0.0,Jawa Barat,0.0,1,0
+0.0,Tambaksari,19,,0.0,0.0,Umum,0.0,Jawa Timur,0.0,1,0
+0.4615,Magelang Selatan,20,Magelang Kota,1.0,1.0,ASN,0.3,Jawa Tengah,1.0,3,3
+0.1818,Tajurhalang,21,Bogor Kab.,1.0,1.0,ASN,0.1,Jawa Barat,1.0,1,1
+0.5,,22,,1.0,1.0,Buruh,1.0,Jawa Tengah,0.3333,511,30
+0.3333,Wonocolo,23,Surabaya Kota,1.0,1.0,Umum,0.2,Jawa Barat,1.0,6,2
+0.0,Pakuwon,24,,0.0,0.0,Umum,0.0,Jawa Barat,0.0,5,0
+0.0,Pakis,25,,0.0,0.0,Buruh,0.0,Jawa Barat,0.0,4,0
+0.0,,26,Sidoarjo  Kab.,0.0,0.0,Umum,0.0,Jawa Barat,0.0,81,0
+0.0,Sambikerep,27,Surabaya Kota,0.0,0.0,Buruh,0.0,Jawa Timur,0.0,2,0
+0.8235,,28,,1.0,1.0,Umum,0.7,Jawa Timur,1.0,129,7
+0.1818,Kebomas,29,,1.0,1.0,Pengusaha,0.1,Jawa Timur,1.0,1,1
+0.1818,Pagedongan,30,Banjarnegara Kab.,1.0,1.0,Pengusaha,0.1,Jawa Tengah,1.0,1,1
+0.0,Gedangan,31,Sidoarjo  Kab.,0.0,0.0,Umum,0.0,Jawa Timur,0.0,1,0
+0.1818,Sumbang,32,Banyumas Kab.,1.0,1.0,Buruh,0.1,Jawa Tengah,1.0,3,1
+0.75,,33,Surabaya Kota,1.0,1.0,Umum,0.6,Jawa Timur,1.0,57,6
+0.4878,,34,Sidoarjo  Kab.,1.0,1.0,Umum,1.0,Jawa Barat,0.3226,81,31
+0.1818,Cinere,35,Depok Kota,1.0,1.0,Buruh,0.1,Jawa Barat,1.0,1,1
+0.3333,Gununganyar,36,,1.0,1.0,Pengusaha,0.2,Jawa Timur,1.0,3,2
+0.0,,37,,0.0,0.0,Buruh,0.0,Jawa Timur,0.0,129,0
+0.1818,Krian,38,Sidoarjo  Kab.,1.0,1.0,Pengusaha,0.1,Jawa Timur,1.0,1,1
+0.0,,39,Bandung Barat Kab.,0.0,0.0,Buruh,0.0,Jawa Barat,0.0,2,0
+0.3333,,40,,1.0,1.0,Umum,0.2,Jawa Timur,1.0,129,2
+0.2326,,41,,1.0,1.0,Pengusaha,1.0,Jawa Timur,0.1316,129,76
+0.8889,Blimbing,42,Malang Kota,1.0,1.0,ASN,0.8,Jawa Barat,1.0,15,8
+0.7143,Jebres,43,,1.0,1.0,ASN,1.0,Jawa Tengah,0.5556,18,18
+0.3636,,44,Malang Kota,1.0,1.0,ASN,1.0,Jawa Barat,0.2222,57,45
+0.1818,Purwokerto Barat,45,,1.0,1.0,Pengusaha,0.1,Jawa Tengah,1.0,2,1
+0.1818,Sidoarjo,46,Sidoarjo  Kab.,1.0,1.0,Pengusaha,0.1,Jawa Timur,1.0,2,1
+0.3333,Semarang Kab.,47,,1.0,1.0,ASN,0.2,Jawa Tengah,1.0,2,2
+0.1818,,48,Semarang Kota,1.0,1.0,Buruh,0.1,Jawa Tengah,1.0,170,1
+0.1818,Genuk,49,Semarang Kota,1.0,1.0,ASN,0.1,Jawa Tengah,1.0,1,1
+1.0,,50,Sidoarjo  Kab.,1.0,1.0,Pengusaha,1.0,Jawa Timur,1.0,18,10
