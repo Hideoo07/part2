@@ -26,74 +26,104 @@ def load_dataset(filepath=DATASET_PATH):
         return pd.DataFrame()
 
     df = pd.read_excel(filepath)
-
-    # Normalisasi nama kolom
     df.columns = df.columns.str.strip()
 
-    # Auto-detect dan rename kolom umum
+    # ✅ DEBUG: Cetak nama kolom asli agar mudah diagnosa
+    print(f"[DEBUG] Kolom asli di Excel: {list(df.columns)}")
+
     rename_map = {}
+    # Kolom yang harus dibuang (pre-computed score, tidak dipakai)
+    drop_cols = [c for c in df.columns if c.lower().startswith("score_")]
+    df = df.drop(columns=drop_cols, errors="ignore")
+    print(f"[DEBUG] Kolom score di-drop: {drop_cols}")
+
     for col in df.columns:
-        cl = col.lower().replace(" ", "_")
-        if cl in ["price", "harga", "price_clean"]:
+        # Normalize: lowercase, hapus spasi/strip, ganti spasi dengan _
+        cl = col.lower().strip().replace(" ", "_").replace("/", "_").replace("-", "_")
+
+        # Harga
+        if cl in ["price", "harga", "price_clean", "harga_clean", "harga_jual",
+                  "harga_(rp)", "harga(rp)", "price_(rp)"]:
             rename_map[col] = "harga"
-        elif cl in ["luas_bangunan", "luas_tanah", "luas", "lb", "lt", "building_size", "land_size"]:
-            if "bangunan" in cl:
-                rename_map[col] = "luas_bangunan"
-            else:
-                rename_map[col] = "luas_tanah"
-        elif cl in ["kamar_tidur", "bedroom", "kamar", "kt", "kamar_tidur_clean"]:
+
+        # Luas bangunan
+        elif any(x in cl for x in ["luas_bangunan", "building_size", "lb", "luas_b"]):
+            rename_map[col] = "luas_bangunan"
+
+        # Luas tanah
+        elif any(x in cl for x in ["luas_tanah", "land_size", "lt", "luas_t"]):
+            rename_map[col] = "luas_tanah"
+
+        # Luas generik (fallback)
+        elif cl in ["luas", "size", "luas_m2", "luas_(m2)"]:
+            rename_map[col] = "luas_bangunan"
+
+        # Kamar tidur
+        elif any(x in cl for x in ["kamar_tidur", "bedroom", "bedrooms",
+                                    "kamar_tidur_clean", "jml_kamar_tidur", "kt"]):
             rename_map[col] = "kamar_tidur"
-        elif cl in ["kamar_mandi", "bathroom", "km"]:
+
+        # Kamar mandi
+        elif any(x in cl for x in ["kamar_mandi", "bathroom", "bathrooms",
+                                    "kamar_mandi_clean", "jml_kamar_mandi", "km"]):
             rename_map[col] = "kamar_mandi"
-        elif cl in ["jenis_properti", "jenis", "tipe", "type", "kategori"]:
+
+        # Jenis properti
+        elif any(x in cl for x in ["jenis_properti", "jenis", "tipe", "type",
+                                    "kategori", "property_type", "tipe_properti"]):
             rename_map[col] = "jenis_properti"
-        elif cl in ["provinsi", "province"]:
+
+        # Provinsi — paling kritis!
+        elif any(x in cl for x in ["provinsi", "province", "prov"]):
             rename_map[col] = "provinsi"
-        elif cl in ["kota", "kota_kab", "city", "kabupaten", "kota/kabupaten"]:
+
+        # Kota — juga kritis!
+        elif any(x in cl for x in ["kota", "kota_kab", "city", "kabupaten",
+                                    "kota_kabupaten", "kab", "kota_kab."]):
             rename_map[col] = "kota"
-        elif cl in ["kecamatan", "district", "kec"]:
+
+        # Kecamatan
+        elif any(x in cl for x in ["kecamatan", "district", "kec", "sub_district"]):
             rename_map[col] = "kecamatan"
-        elif cl in ["nama", "judul", "title", "name", "listing"]:
+
+        # Nama / judul listing
+        elif any(x in cl for x in ["nama", "judul", "title", "name",
+                                    "listing", "nama_properti", "judul_iklan"]):
             rename_map[col] = "nama"
 
+    print(f"[DEBUG] Rename map: {rename_map}")
     df = df.rename(columns=rename_map)
 
-    # Pastikan kolom penting ada
     for col in ["harga", "luas_bangunan", "luas_tanah", "kamar_tidur",
                 "kamar_mandi", "jenis_properti", "provinsi", "kota", "kecamatan", "nama"]:
         if col not in df.columns:
             df[col] = None
 
-    # Bersihkan tipe data
     df["harga"]        = pd.to_numeric(df["harga"],        errors="coerce")
     df["luas_bangunan"]= pd.to_numeric(df["luas_bangunan"],errors="coerce")
     df["luas_tanah"]   = pd.to_numeric(df["luas_tanah"],   errors="coerce")
     df["kamar_tidur"]  = pd.to_numeric(df["kamar_tidur"],  errors="coerce")
     df["kamar_mandi"]  = pd.to_numeric(df["kamar_mandi"],  errors="coerce")
 
-    df["provinsi"]     = df["provinsi"].astype(str).str.strip()
-    df["kota"]         = df["kota"].astype(str).str.strip()
-    df["kecamatan"]    = df["kecamatan"].astype(str).str.strip()
+    df["provinsi"]      = df["provinsi"].astype(str).str.strip()
+    df["kota"]          = df["kota"].astype(str).str.strip()
+    df["kecamatan"]     = df["kecamatan"].astype(str).str.strip()
     df["jenis_properti"]= df["jenis_properti"].astype(str).str.strip()
 
-    # Hapus baris tanpa harga atau provinsi
     df = df.dropna(subset=["harga"])
     df = df[df["harga"] > 0]
     df = df[df["provinsi"].notna() & (df["provinsi"] != "nan") & (df["provinsi"] != "")]
 
-    # Isi kolom nama jika kosong
     df["nama"] = df["nama"].fillna(
         df.apply(lambda r: f"{r['jenis_properti']} - {r['kota']}", axis=1)
     )
 
-    # Reset index
     df = df.reset_index(drop=True)
     df["id"] = df.index + 1
 
     print(f"[INFO] Dataset loaded: {len(df)} properti")
     print(f"[INFO] Provinsi: {sorted(df['provinsi'].unique())}")
     return df
-
 
 df_properti = load_dataset()
 
@@ -115,7 +145,6 @@ def build_map(df):
                 peta[prov][kota] = set()
             if kec and kec != "nan":
                 peta[prov][kota].add(kec)
-    # Konversi set ke sorted list
     for prov in peta:
         for kota in peta[prov]:
             peta[prov][kota] = sorted(peta[prov][kota])
@@ -144,19 +173,18 @@ def get_threshold(pekerjaan):
 # ===================== AHP WEIGHTS =====================
 
 def get_weights_by_pekerjaan(pekerjaan):
-    """Bobot AHP [harga, luas, kamar_tidur, kamar_mandi, lokasi] per profesi."""
     p = str(pekerjaan).strip().lower()
     presets = {
-        "buruh":       [0.45, 0.10, 0.10, 0.05, 0.30],
-        "asn":         [0.25, 0.20, 0.15, 0.10, 0.30],
-        "pns":         [0.25, 0.20, 0.15, 0.10, 0.30],
-        "pengusaha":   [0.10, 0.35, 0.25, 0.15, 0.15],
-        "profesional": [0.15, 0.30, 0.25, 0.15, 0.15],
-        "swasta":      [0.30, 0.20, 0.20, 0.10, 0.20],
-        "wiraswasta":  [0.20, 0.25, 0.20, 0.10, 0.25],
-        "freelancer":  [0.35, 0.20, 0.15, 0.10, 0.20],
-        "pensiunan":   [0.40, 0.15, 0.15, 0.10, 0.20],
-        "umum":        [0.35, 0.20, 0.15, 0.10, 0.20],
+        "buruh":      [0.45, 0.10, 0.10, 0.05, 0.30],
+        "asn":        [0.25, 0.20, 0.15, 0.10, 0.30],
+        "pns":        [0.25, 0.20, 0.15, 0.10, 0.30],
+        "pengusaha":  [0.10, 0.35, 0.25, 0.15, 0.15],
+        "profesional":[0.15, 0.30, 0.25, 0.15, 0.15],
+        "swasta":     [0.30, 0.20, 0.20, 0.10, 0.20],
+        "wiraswasta": [0.20, 0.25, 0.20, 0.10, 0.25],
+        "freelancer": [0.35, 0.20, 0.15, 0.10, 0.20],
+        "pensiunan":  [0.40, 0.15, 0.15, 0.10, 0.20],
+        "umum":       [0.35, 0.20, 0.15, 0.10, 0.20],
     }
     return presets.get(p, presets["umum"])
 
@@ -208,22 +236,25 @@ def profile_matching(df_f, pref):
         total = (weights[0]*sh + weights[1]*sl + weights[2]*sk +
                  weights[3]*sm + weights[4]*so)
         results.append({
-            "id": int(row["id"]),
-            "nama": str(row["nama"]),
-            "harga": int(row["harga"]),
-            "luas_bangunan": float(row["luas_bangunan"] or 0),
-            "luas_tanah": float(row["luas_tanah"] or 0),
-            "kamar_tidur": int(row["kamar_tidur"] or 0),
-            "kamar_mandi": int(row["kamar_mandi"] or 0),
-            "jenis_properti": str(row["jenis_properti"]),
-            "provinsi": str(row["provinsi"]),
-            "kota": str(row["kota"]),
-            "kecamatan": str(row["kecamatan"]),
-            "skor_total": round(total, 4),
+            "id":           int(row["id"]),
+            "nama":         str(row["nama"]),
+            "harga":        int(row["harga"]),
+            "luas_bangunan":float(row["luas_bangunan"] or 0),
+            "luas_tanah":   float(row["luas_tanah"] or 0),
+            "kamar_tidur":  int(row["kamar_tidur"] or 0),
+            "kamar_mandi":  int(row["kamar_mandi"] or 0),
+            "jenis_properti":str(row["jenis_properti"]),
+            "provinsi":     str(row["provinsi"]),
+            "kota":         str(row["kota"]),
+            "kecamatan":    str(row["kecamatan"]),
+            "skor_total":   round(total, 4),
+            "skor":         round(total, 4),  # ✅ FIX: alias untuk index.html yang baca item.skor
             "detail_skor": {
-                "harga": round(sh, 2), "luas": round(sl, 2),
-                "kamar_tidur": round(sk, 2), "kamar_mandi": round(sm, 2),
-                "lokasi": round(so, 2)
+                "harga":      round(sh, 2),
+                "luas":       round(sl, 2),
+                "kamar_tidur":round(sk, 2),
+                "kamar_mandi":round(sm, 2),
+                "lokasi":     round(so, 2)
             }
         })
     return sorted(results, key=lambda x: x["skor_total"], reverse=True)
@@ -237,10 +268,10 @@ def hitung_metrik(rec_ids, rel_ids, k):
     precision = tp / k if k else 0
     recall    = tp / len(rel_set) if rel_set else 0
     f1        = (2*precision*recall/(precision+recall)) if (precision+recall) > 0 else 0
-    dcg  = sum((1 if rec[i] in rel_set else 0)/np.log2(i+2) for i in range(len(rec)))
-    idcg = sum(1/np.log2(i+2) for i in range(min(len(rel_set), k)))
-    ndcg = dcg/idcg if idcg else 0
-    mrr  = next((1/(i+1) for i, idx in enumerate(rec) if idx in rel_set), 0)
+    dcg       = sum((1 if rec[i] in rel_set else 0)/np.log2(i+2) for i in range(len(rec)))
+    idcg      = sum(1/np.log2(i+2) for i in range(min(len(rel_set), k)))
+    ndcg      = dcg/idcg if idcg else 0
+    mrr       = next((1/(i+1) for i, idx in enumerate(rec) if idx in rel_set), 0)
     return {"precision": round(precision,4), "recall": round(recall,4),
             "f1": round(f1,4), "ndcg": round(ndcg,4), "mrr": round(mrr,4)}
 
@@ -250,32 +281,62 @@ def hitung_metrik(rec_ids, rel_ids, k):
 def index():
     return send_from_directory(".", "index.html")
 
-@app.route("/api/data-info", methods=["GET"])
+# ✅ DEBUG ENDPOINT: Cek nama kolom asli di Excel via browser
+@app.route("/api/debug-kolom", methods=["GET"])
+def debug_kolom():
+    if df_properti.empty:
+        # Baca ulang untuk lihat kolom mentah
+        if os.path.exists(DATASET_PATH):
+            df_raw = pd.read_excel(DATASET_PATH)
+            return jsonify({
+                "status": "dataset_gagal_load",
+                "kolom_asli": list(df_raw.columns),
+                "total_baris": len(df_raw)
+            })
+        return jsonify({"status": "file_tidak_ditemukan", "path": DATASET_PATH})
+    return jsonify({
+        "status": "ok",
+        "total_properti": len(df_properti),
+        "kolom_setelah_rename": list(df_properti.columns),
+        "provinsi_tersedia": sorted(df_properti["provinsi"].dropna().unique().tolist()),
+        "sample_provinsi_5": df_properti["provinsi"].dropna().head(5).tolist()
+    })
+
+# ✅ FIX 1: Nama endpoint diubah dari /api/data-info → /api/dataset-info
+# agar sesuai dengan fetch() di index.html
+@app.route("/api/dataset-info", methods=["GET"])
 def data_info():
     if df_properti.empty:
         return jsonify({"error": "Dataset tidak tersedia"}), 500
     return jsonify({
-        "total_properti": len(df_properti),
-        "provinsi": sorted(df_properti["provinsi"].dropna().unique().tolist()),
-        "jenis_properti": sorted(df_properti["jenis_properti"].dropna().unique().tolist()),
-        "harga_min": int(df_properti["harga"].min()),
-        "harga_max": int(df_properti["harga"].max()),
-        "harga_rata": int(df_properti["harga"].mean()),
+        "total_properti":  len(df_properti),
+        "provinsi":        sorted(df_properti["provinsi"].dropna().unique().tolist()),
+        "jenis_properti":  sorted(df_properti["jenis_properti"].dropna().unique().tolist()),
+        # ✅ FIX: nama field disesuaikan dengan yang dibaca index.html
+        "min_harga":       int(df_properti["harga"].min()),
+        "max_harga":       int(df_properti["harga"].max()),
+        "rata_rata_harga": int(df_properti["harga"].mean()),
     })
 
+# ✅ FIX 2: Endpoint /api/wilayah — kembalikan daftar provinsi sebagai list
+# agar index.html bisa populate dropdown <select id="provinsi">
 @app.route("/api/wilayah", methods=["GET"])
 def wilayah():
-    """Seluruh mapping provinsi → kota → kecamatan dari data."""
-    return jsonify(WILAYAH_MAP)
+    return jsonify({
+        "provinsi": sorted(WILAYAH_MAP.keys()),
+        "map":      WILAYAH_MAP
+    })
 
-@app.route("/api/kota/<provinsi>", methods=["GET"])
+# ✅ FIX 3: Route /api/kota/<provinsi> — URL parameter di-decode agar
+# nama provinsi dengan spasi (misal "Jawa Barat") tidak menjadi 404
+@app.route("/api/kota/<path:provinsi>", methods=["GET"])
 def get_kota(provinsi):
     prov_key = next((k for k in WILAYAH_MAP if k.lower() == provinsi.lower()), None)
     if not prov_key:
         return jsonify({"kota": []})
     return jsonify({"kota": sorted(WILAYAH_MAP[prov_key].keys())})
 
-@app.route("/api/kecamatan/<provinsi>/<kota>", methods=["GET"])
+@app.route("/api/kecamatan/<path:provinsi>/<path:kota>", methods=["GET"])
 def get_kecamatan(provinsi, kota):
     prov_key = next((k for k in WILAYAH_MAP if k.lower() == provinsi.lower()), None)
     if not prov_key:
@@ -290,10 +351,9 @@ def rekomendasi():
     if df_properti.empty:
         return jsonify({"error": "Dataset tidak tersedia"}), 500
 
-    data = request.get_json() or {}
+    data   = request.get_json() or {}
     errors = []
 
-    # Validasi wajib
     if not data.get("budget_max"):
         errors.append("'budget_max' wajib diisi.")
     if not data.get("provinsi"):
@@ -301,32 +361,28 @@ def rekomendasi():
     if errors:
         return jsonify({"error": "Validasi gagal", "details": errors}), 400
 
-    # Ambil preferensi
     pref = {
-        "budget_min":   int(data.get("budget_min", 0)),
-        "budget_max":   int(data["budget_max"]),
-        "luas_min":     float(data.get("luas_min", 0)),
-        "kamar_tidur":  int(data.get("kamar_tidur", 0)),
-        "kamar_mandi":  int(data.get("kamar_mandi", 0)),
-        "jenis_properti": str(data.get("jenis_properti", "")),
-        "provinsi":     str(data.get("provinsi", "")),
-        "kota":         str(data.get("kota", "")),
-        "kecamatan":    str(data.get("kecamatan", "")),
-        "pekerjaan":    str(data.get("pekerjaan", "umum")),
+        "budget_min":    int(data.get("budget_min", 0)),
+        "budget_max":    int(data["budget_max"]),
+        "luas_min":      float(data.get("luas_min", 0)),
+        "kamar_tidur":   int(data.get("kamar_tidur", 0)),
+        "kamar_mandi":   int(data.get("kamar_mandi", 0)),
+        "jenis_properti":str(data.get("jenis_properti", "")),
+        "provinsi":      str(data.get("provinsi", "")),
+        "kota":          str(data.get("kota", "")),
+        "kecamatan":     str(data.get("kecamatan", "")),
+        "pekerjaan":     str(data.get("pekerjaan", "umum")),
     }
     top_k = int(data.get("top_k", 10))
 
-    # Filter dataset
     df_f = df_properti.copy()
 
-    # Filter harga (dengan toleransi soft berdasarkan profesi)
     toleransi = {"buruh": 0.05, "asn": 0.15, "pengusaha": 0.30}.get(
         pref["pekerjaan"].lower(), 0.10)
     df_f = df_f[df_f["harga"] <= pref["budget_max"] * (1 + toleransi)]
     if pref["budget_min"] > 0:
         df_f = df_f[df_f["harga"] >= pref["budget_min"] * (1 - toleransi)]
 
-    # Filter wilayah
     if pref["provinsi"]:
         df_f = df_f[df_f["provinsi"].str.lower() == pref["provinsi"].lower()]
     if pref["kota"]:
@@ -338,18 +394,13 @@ def rekomendasi():
         if len(df_kec) >= 3:
             df_f = df_kec
 
-    # Filter luas
     if pref["luas_min"] > 0:
         df_f = df_f[
             (df_f["luas_bangunan"] >= pref["luas_min"]) |
-            (df_f["luas_tanah"] >= pref["luas_min"])
+            (df_f["luas_tanah"]    >= pref["luas_min"])
         ]
-
-    # Filter kamar tidur
     if pref["kamar_tidur"] > 0:
         df_f = df_f[df_f["kamar_tidur"] >= pref["kamar_tidur"]]
-
-    # Filter jenis properti
     if pref["jenis_properti"]:
         df_jenis = df_f[df_f["jenis_properti"].str.lower() == pref["jenis_properti"].lower()]
         if len(df_jenis) >= 3:
@@ -361,36 +412,34 @@ def rekomendasi():
             "rekomendasi": [], "total_kandidat": 0
         })
 
-    # Profile Matching + Ranking
-    results = profile_matching(df_f, pref)
+    results   = profile_matching(df_f, pref)
     threshold = get_threshold(pref["pekerjaan"])
     top_results = [r for r in results if r["skor_total"] >= threshold][:top_k]
-
-    # Jika tidak ada yang lolos threshold, ambil top_k terbaik
     if not top_results:
         top_results = results[:top_k]
 
     bobot = get_weights_by_pekerjaan(pref["pekerjaan"])
     return jsonify({
-        "pekerjaan": pref["pekerjaan"],
+        "pekerjaan":      pref["pekerjaan"],
         "threshold_used": threshold,
-        "bobot_ahp": dict(zip(["harga","luas","kamar_tidur","kamar_mandi","lokasi"], bobot)),
+        "bobot_ahp":      dict(zip(["harga","luas","kamar_tidur","kamar_mandi","lokasi"], bobot)),
         "total_kandidat": len(df_f),
         "total_rekomendasi": len(top_results),
-        "rekomendasi": top_results
+        # ✅ FIX: tambah field message agar ditampilkan di index.html
+        "message": f"Ditemukan {len(top_results)} rekomendasi dari {len(df_f)} kandidat properti.",
+        "rekomendasi":    top_results
     })
-
 
 @app.route("/api/evaluasi-massal", methods=["POST"])
 def evaluasi_massal():
     if df_properti.empty:
         return jsonify({"error": "Dataset tidak tersedia"}), 500
 
-    data       = request.get_json() or {}
-    n          = int(data.get("jumlah_konsumen", 1000))
-    top_k      = int(data.get("top_k", 10))
-    pekerjaan_list = ["buruh", "asn", "pengusaha", "umum"]
-    provinsi_list  = df_properti["provinsi"].dropna().unique().tolist()
+    data          = request.get_json() or {}
+    n             = int(data.get("jumlah_konsumen", 1000))
+    top_k         = int(data.get("top_k", 10))
+    pekerjaan_list= ["buruh", "asn", "pengusaha", "umum"]
+    provinsi_list = df_properti["provinsi"].dropna().unique().tolist()
 
     all_metrics  = {p: [] for p in pekerjaan_list}
     harga_vals   = df_properti["harga"].dropna()
@@ -400,23 +449,16 @@ def evaluasi_massal():
     for _ in range(n):
         pek      = np.random.choice(pekerjaan_list)
         provinsi = np.random.choice(provinsi_list)
-
-        # Randomize budget
         budget_max = int(np.random.uniform(harga_min_g, harga_max_g * 0.8))
         budget_min = int(budget_max * np.random.uniform(0.3, 0.7))
         luas_min   = int(np.random.uniform(20, 150))
         kamar      = int(np.random.choice([1, 2, 3, 4]))
 
         pref = {
-            "budget_min":  budget_min,
-            "budget_max":  budget_max,
-            "luas_min":    luas_min,
-            "kamar_tidur": kamar,
-            "kamar_mandi": 1,
-            "jenis_properti": "",
-            "provinsi": provinsi,
-            "kota": "", "kecamatan": "",
-            "pekerjaan": pek
+            "budget_min": budget_min, "budget_max": budget_max,
+            "luas_min": luas_min, "kamar_tidur": kamar, "kamar_mandi": 1,
+            "jenis_properti": "", "provinsi": provinsi,
+            "kota": "", "kecamatan": "", "pekerjaan": pek
         }
 
         toleransi = {"buruh": 0.05, "asn": 0.15, "pengusaha": 0.30}.get(pek, 0.10)
@@ -425,20 +467,18 @@ def evaluasi_massal():
             (df_properti["harga"] <= budget_max * (1 + toleransi)) &
             (df_properti["harga"] >= budget_min * (1 - toleransi))
         ]
-
         if len(df_f) < 2:
             continue
 
-        results   = profile_matching(df_f, pref)
-        threshold = get_threshold(pek)
-        rec_ids   = [r["id"] for r in results[:top_k]]
-        rel_ids   = [r["id"] for r in results if r["skor_total"] >= threshold]
+        results  = profile_matching(df_f, pref)
+        threshold= get_threshold(pek)
+        rec_ids  = [r["id"] for r in results[:top_k]]
+        rel_ids  = [r["id"] for r in results if r["skor_total"] >= threshold]
         if not rel_ids:
             rel_ids = [r["id"] for r in results[:3]]
 
         all_metrics[pek].append(hitung_metrik(rec_ids, rel_ids, top_k))
 
-    # Aggregate
     summary = {}
     for pek, ml in all_metrics.items():
         if not ml:
@@ -453,7 +493,7 @@ def evaluasi_massal():
             "avg_mrr":       round(np.mean([m["mrr"]       for m in ml]), 4),
         }
 
-    all_m = [m for ml in all_metrics.values() for m in ml]
+    all_m   = [m for ml in all_metrics.values() for m in ml]
     overall = {}
     if all_m:
         overall = {
@@ -467,11 +507,10 @@ def evaluasi_massal():
 
     return jsonify({
         "jumlah_konsumen_target": n,
-        "threshold_per_profesi": THRESHOLD_PROFESI,
+        "threshold_per_profesi":  THRESHOLD_PROFESI,
         "per_profesi": summary,
-        "overall": overall
+        "overall":     overall
     })
-
 
 # ===================== RUN =====================
 if __name__ == "__main__":
